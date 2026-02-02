@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # Page Config
-st.set_page_config(page_title="AEP App Scorer (Expanded)", layout="centered")
+st.set_page_config(page_title="AEP App Scorer (Refined)", layout="centered")
 
 # --- CUSTOM CSS ---
 st.markdown("""
@@ -15,10 +15,10 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- LOGIC ENGINE ---
+# --- REFINED LOGIC ENGINE ---
 def calculate_score(a):
-    # TIER 1: MISSION CRITICAL (Red)
-    # Logic: Safety, Grid, Immediate Fines, or Emergency Restore (<4 hrs)
+    # --- LEVEL 1: MISSION CRITICAL ---
+    # The "Kill Switch" scenarios. If ANY of these are Yes, it is Tier 1.
     if (a['Safety'] == 'Yes' or 
         a['Grid'] == 'Yes' or 
         a['Fines'] == 'Yes' or 
@@ -26,56 +26,58 @@ def calculate_score(a):
         return {
             "Level": "1 - Mission Critical",
             "Description": "Vital for Safety, Grid, or Law. Zero downtime tolerance.",
-            "Color": "#D32F2F"
+            "Color": "#D32F2F" # Red
         }
 
-    # TIER 2: BUSINESS CRITICAL (Orange)
-    # Logic: Money, Customers, Privacy, or "Same Day" restore
+    # --- LEVEL 2: BUSINESS CRITICAL ---
+    # High Value scenarios. Revenue, Customers, or Private Data.
     if (a['Money'] == 'Yes' or 
         a['Public'] == 'Yes' or 
         a['Privacy'] == 'Yes' or 
         a['RestoreTime'] == 'Same Day (Within 24 hours)'):
         return {
             "Level": "2 - Business Critical",
-            "Description": "Core business blocked. High financial or reputation risk.",
-            "Color": "#F57C00"
+            "Description": "Core business blocked. High financial risk, Customer impact, or PII data.",
+            "Color": "#F57C00" # Orange
         }
 
-    # TIER 3: OPERATIONAL (Blue)
-    # Logic: Wide usage (Whole Company) OR Daily usage with no backup
-    if (a['Users'] == 'The Whole Company (Everyone)' or 
-        (a['UsageFreq'] == 'Daily / Constantly' and a['ManualBackup'] == 'No')):
+    # --- LEVEL 3: OPERATIONAL ---
+    # Work stops, but we can survive a day.
+    # Logic: If manual work is IMPOSSIBLE ("No" backup) OR Work Stops completely.
+    if (a['ManualBackup'] == 'No (We stop working)' or 
+        a['RestoreTime'] == 'Next Day (24-48 hours)'):
         return {
             "Level": "3 - Operational",
-            "Description": "Important for daily work. High inconvenience if down.",
-            "Color": "#1976D2"
+            "Description": "Important tool. Work is painful or stops without it, but can wait 24h.",
+            "Color": "#1976D2" # Blue
         }
 
-    # TIER 4: NON-CRITICAL (Grey)
+    # --- LEVEL 4: NON-CRITICAL ---
+    # Convenience only.
     return {
         "Level": "4 - Non-Critical",
-        "Description": "Administrative or convenience tool. Work continues without it.",
-        "Color": "#616161"
+        "Description": "Administrative or convenience tool. Work continues manually.",
+        "Color": "#616161" # Grey
     }
 
 # --- HEADER ---
-st.title("⚡ Expanded App Assessment")
-st.write("Please answer these **16 questions**. This helps us understand who needs this app, how risky it is, and how to support it.")
+st.title("⚡ Refined App Assessment")
+st.write("Please answer these **15 questions**. This determines the Business Criticality and Support level required.")
 
 # --- INPUTS ---
-with st.form("expanded_form"):
+with st.form("refined_form"):
     
     # 0. BASIC INFO
     col_a, col_b = st.columns(2)
     with col_a:
-        app_name = st.text_input("Application Name (e.g. OMS, SAP)")
+        app_name = st.text_input("Application Name")
     with col_b:
         dept_name = st.selectbox("Department", ["Distribution", "Transmission", "Generation", "IT/Corporate", "HR/Finance"])
 
     st.divider()
 
-    # SECTION 1: THE "KILL SWITCH" (Impact)
-    st.markdown("### 1. 🚨 The 'Kill Switch' (Impact)")
+    # SECTION 1: CRITICALITY DRIVERS (The "Why")
+    st.markdown("### 1. 🚨 Impact & Risk")
     
     q1_safety = st.radio("1. Could a failure here hurt a person or damage the Power Grid?", ["No", "Yes"], horizontal=True)
     q2_money = st.radio("2. Do we lose actual money (revenue/payments) if this breaks?", ["No", "Yes"], horizontal=True)
@@ -85,8 +87,8 @@ with st.form("expanded_form"):
 
     st.divider()
 
-    # SECTION 2: THE PEOPLE (Usage)
-    st.markdown("### 2. 👥 The People (Usage)")
+    # SECTION 2: USAGE (The "Who")
+    st.markdown("### 2. 👥 Users & Accessibility")
     
     q5_users = st.selectbox("5. Who uses this software?", 
                             ["Just me / My small team (<10 people)", "My whole department (~50-100 people)", "The Whole Company (Everyone)"])
@@ -96,26 +98,26 @@ with st.form("expanded_form"):
 
     st.divider()
 
-    # SECTION 3: THE TECH (Hosting & Support)
-    st.markdown("### 3. 💻 The Tech (Hosting)")
+    # SECTION 3: TECHNICAL DETAILS (The "How")
+    st.markdown("### 3. 💻 Technical Details")
     
     q9_access = st.radio("9. How do you access it?", ["Web Browser (Chrome/Edge)", "Installed on my Laptop (.exe)", "Mobile App on Phone"], horizontal=True)
-    q10_login = st.radio("10. Do you log in with your standard AEP Password?", ["Yes (SSO)", "No (Separate Username/Password)"], horizontal=True)
+    q10_login = st.radio("10. Do you log in with your standard AEP Password (SSO)?", ["Yes (SSO)", "No (Separate Username/Password)"], horizontal=True)
     q11_vendor = st.selectbox("11. Who built this?", ["We bought it (Vendor/SaaS)", "AEP built it (In-house Custom)", "I don't know"])
     q12_network = st.radio("12. Does it work without the Internet/Network?", ["No (Needs Network)", "Yes (Works Offline)"], horizontal=True)
 
     st.divider()
 
-    # SECTION 4: THE DATA (Security & Connections)
-    st.markdown("### 4. 🔒 The Data")
+    # SECTION 4: DATA SENSITIVITY (The "What")
+    st.markdown("### 4. 🔒 Data & Integration")
 
     q13_privacy = st.radio("13. Does it contain private people data (SSN, Payroll, Addresses)?", ["No", "Yes"], horizontal=True)
-    q14_export = st.radio("14. Can you export data to Excel/PDF from it?", ["No", "Yes"], horizontal=True)
-    q15_connect = st.radio("15. Does it send data automatically to other AEP systems?", ["No (It stands alone)", "Yes (It feeds other apps)"], horizontal=True)
-    q16_input = st.radio("16. Do you TYPE new data in, or just READ old data?", ["We Type/Edit Data (Active)", "Just Read/View (Read-Only)"], horizontal=True)
+    # REMOVED: Export question
+    q14_connect = st.radio("14. Does it send data automatically to other AEP systems?", ["No (It stands alone)", "Yes (It feeds other apps)"], horizontal=True)
+    q15_input = st.radio("15. Do you TYPE new data in, or just READ old data?", ["We Type/Edit Data (Active)", "Just Read/View (Read-Only)"], horizontal=True)
 
     st.divider()
-    submitted = st.form_submit_button("Check Criticality Level")
+    submitted = st.form_submit_button("Calculate Criticality")
 
 # --- RESULTS ---
 if submitted:
@@ -128,7 +130,7 @@ if submitted:
             "Money": q2_money, "Fines": q3_fines, "RestoreTime": q4_restore,
             "Users": q5_users, "UsageFreq": q6_freq, "Public": q7_public, "ManualBackup": q8_backup,
             "Access": q9_access, "Login": q10_login, "Vendor": q11_vendor, "Network": q12_network,
-            "Privacy": q13_privacy, "Export": q14_export, "Connects": q15_connect, "Input": q16_input
+            "Privacy": q13_privacy, "Connects": q14_connect, "Input": q15_input
         }
 
         # Calculate Score
@@ -148,26 +150,25 @@ if submitted:
             ["Application Name", app_name],
             ["Department", dept_name],
             ["CALCULATED CRITICALITY", result['Level']],
-            ["--- SECTION 1: IMPACT ---", ""],
+            ["--- IMPACT ---", ""],
             ["1. Safety/Grid Risk", q1_safety],
             ["2. Financial Loss", q2_money],
             ["3. Legal/Fines", q3_fines],
-            ["4. Required Restore Time", q4_restore],
-            ["--- SECTION 2: USAGE ---", ""],
+            ["4. Restore Time Needed", q4_restore],
+            ["--- USAGE ---", ""],
             ["5. Who uses it?", q5_users],
             ["6. How often?", q6_freq],
             ["7. External Customers?", q7_public],
             ["8. Manual Workaround?", q8_backup],
-            ["--- SECTION 3: TECH ---", ""],
+            ["--- TECH ---", ""],
             ["9. Access Method", q9_access],
-            ["10. Login Method (SSO)", q10_login],
+            ["10. SSO/Login", q10_login],
             ["11. Vendor/Builder", q11_vendor],
             ["12. Network Dependency", q12_network],
-            ["--- SECTION 4: DATA ---", ""],
+            ["--- DATA ---", ""],
             ["13. PII/Private Data", q13_privacy],
-            ["14. Export Capability", q14_export],
-            ["15. Integration (Feeds others)", q15_connect],
-            ["16. Read-Only vs Active", q16_input]
+            ["14. Integration (Feeds others)", q14_connect],
+            ["15. Active vs Read-Only", q15_input]
         ]
 
         # Convert to DataFrame
@@ -182,6 +183,6 @@ if submitted:
         st.download_button(
             label="Download Results (Excel/CSV)",
             data=csv,
-            file_name=f"{app_name}_Full_Assessment.csv",
+            file_name=f"{app_name}_Assessment.csv",
             mime="text/csv"
         )
