@@ -61,7 +61,7 @@ def calculate_score(a):
     }
 
 # --- HEADER ---
-st.title("⚡ Refined App Assessment")
+st.title("⚡ AEP CSDM Business Criticality Assessment")
 st.write("Please answer these **15 questions**. This determines the Business Criticality and Support level required.")
 
 # --- INPUTS ---
@@ -186,3 +186,4 @@ if submitted:
             file_name=f"{app_name}_Assessment.csv",
             mime="text/csv"
         )
+
